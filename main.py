@@ -39,6 +39,12 @@ def ola():
           "dinheiro": estatistica.dinheiro
     })
 
+@app.route('/estatisticas', methods=['POST'])
+def posta_estatistica():
+     return jsonify({
+          "mensagem": "post funcional"
+     })
+
 
 if __name__ == '__main__':
 	# Executa a aplicação em modo debug
