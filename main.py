@@ -73,17 +73,28 @@ def index():
 	})
 
 @app.route('/estatisticas')
-def ola():
-    estatistica = Estatisticas("Chico", 21, 12, 10, 2300, datetime.date(2025,10,1), 8000 )
-    return jsonify({
-          "nome": estatistica.nome,
-          "abates": estatistica.abates,
-          "mortes": estatistica.mortes,
-          "assistencias": estatistica.assistencias,
-          "dano": estatistica.dano,
-          "data": estatistica.data,
-          "dinheiro": estatistica.dinheiro
-    })
+def buscar_estatisticas():
+    db = get_db() 
+    try:
+        registros = db.execute(
+            "SELECT id, nome, abates, mortes, assistencias, dano, data, dinheiro FROM estatisticas ORDER BY id"
+        )
+        linhas = registros.fetchall() #fetchall = traz os dados da consulta
+        estatisticas = []
+        for linha in linhas:
+            estatisticas.append({
+                "id": linha["id"],
+                "nome": linha["nome"],
+                "abates": linha["abates"],
+                "mortes": linha["mortes"],
+                "assistencias": linha["assistencias"],
+                "dano": linha["dano"],
+                "data": linha["data"],
+                "dinheiro": linha["dinheiro"],
+            })
+        return jsonify(estatisticas)
+    finally:
+        db.close()
 
 @app.route('/estatisticas', methods=['POST'])
 def posta_estatistica():
