@@ -105,25 +105,5 @@ def posta_estatistica():
 
 if __name__ == '__main__':
     init_db()
-    db = get_db() 
-    try:
-        registros = db.execute(
-            "SELECT id, nome, abates, mortes, assistencias, dano, data, dinheiro FROM estatisticas ORDER BY id"
-        )
-        linhas = registros.fetchall()
-        for linha in linhas:
-            print({
-                "id": linha["id"],
-                "nome": linha["nome"],
-                "abates": linha["abates"],
-                "mortes": linha["mortes"],
-                "assistencias": linha["assistencias"],
-                "dano": linha["dano"],
-                "data": linha["data"],
-                "dinheiro": linha["dinheiro"],
-            })
-    
-    finally:
-        db.close()
 	# Executa a aplicação em modo debug
     app.run(host='0.0.0.0', port=5001, debug=True)
