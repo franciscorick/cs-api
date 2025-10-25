@@ -51,7 +51,7 @@ Na Vercel, o SQLite funciona em `/tmp` e **é temporário**. Os dados são perdi
 pip install -r requirements.txt
 
 # Rodar localmente
-python main.py
+python api/index.py
 ```
 
 Acesse: http://localhost:5001
@@ -61,9 +61,10 @@ Acesse: http://localhost:5001
 ```
 cs-api/
 ├── api/
-│   └── index.py      # Entry point para Vercel
-├── main.py           # Aplicação Flask original
+│   └── index.py      # Entry point para Vercel e execução local
 ├── requirements.txt  # Dependências Python
 ├── vercel.json       # Configuração Vercel
 └── .vercelignore     # Arquivos ignorados no deploy
 ```
+
+Nota: o arquivo `vercel.json` está configurado para compilar funções Python em `api/**/*.py` e rotear `/(.*)` para `/api/index.py`.
