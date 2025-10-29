@@ -2,7 +2,6 @@ from flask import Flask, jsonify
 import sqlite3
 import os
 
-
 app = Flask(__name__)
 
 def get_db():
@@ -75,7 +74,6 @@ def index():
 
 @app.route('/estatisticas')
 def buscar_estatisticas():
-    init_db()  # Inicializa DB a cada request na Vercel
     db = get_db()
     try:
         registros = db.execute(
@@ -100,16 +98,13 @@ def buscar_estatisticas():
 
 @app.route('/estatisticas', methods=['POST'])
 def posta_estatistica():
-     return jsonify({
-          "mensagem": "post funcional"
-     })
+    return jsonify({
+        "mensagem": "post funcional"
+    })
 
 
 # Inicializa o DB na primeira execução
 init_db()
-
-# Para Vercel, exporta o app
-app = app
 
 if __name__ == '__main__':
 	# Executa a aplicação em modo debug
