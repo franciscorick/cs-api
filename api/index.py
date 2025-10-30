@@ -7,7 +7,7 @@ import time
 app = Flask(__name__)
 
 def log_event(evento, descricao):
-    log_caminho = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs', 'log.csv')
+    log_caminho = os.path.join('/tmp', 'log.csv')  # Mude o caminho para /tmp
     with open(log_caminho, 'a', encoding='utf-8') as log_file:
         log_file.write(f"{evento},{descricao},{int(time.time())}\n")
 
@@ -45,7 +45,7 @@ def init_db():
         # Ler dados do arquivo CSV
         arquivo_dados_estatisticos = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'estatisticas.csv')
         estatisticas_iniciais = []
-        
+
         with open(arquivo_dados_estatisticos, 'r', encoding='utf-8') as arquivo_csv:
             leitor = csv.DictReader(arquivo_csv)
             for linha in leitor:
@@ -57,7 +57,7 @@ def init_db():
                     int(linha['dano']),
                     linha['data'],
                     int(linha['dinheiro'])
-                ))       
+                ))
 
         db.executemany(
             "INSERT INTO estatisticas (nome, abates, mortes, assistencias, dano, data, dinheiro) VALUES (?, ?, ?, ?, ?, ?, ?)",
