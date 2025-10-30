@@ -122,6 +122,21 @@ def posta_estatistica():
         "mensagem": "post funcional"
     })
 
+@app.route('/logs')
+def buscar_logs():
+    log_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs', 'log.csv')
+    logs = []
+    with open(log_path, 'r', encoding='utf-8') as log_file:
+        leitor = csv.DictReader(log_file)
+        logs = [
+            {
+                "evento": linha["evento"],
+                "descricao": linha["descricao"],
+                "timestamp": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(int(linha["timestamp"])))
+            }
+            for linha in leitor  # ← Funcional (declarativo)
+        ]
+    return jsonify(logs)
 
 # Inicializa o DB na primeira execução
 init_db()
