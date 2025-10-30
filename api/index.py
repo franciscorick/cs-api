@@ -1,6 +1,7 @@
 from flask import Flask, jsonify
 import sqlite3
 import os
+import csv
 
 app = Flask(__name__)
 
@@ -35,12 +36,22 @@ def init_db():
     cur = db.execute("SELECT COUNT(*) AS total FROM estatisticas")
     total = cur.fetchone()[0]
     if total == 0:
-        # Dados iniciais baseados na estrutura da classe Estatisticas
-        estatisticas_iniciais = [
-            ("Chico", 21, 12, 10, 2300, "2025-10-01", 8000),
-            ("Player2", 15, 8, 20, 1800, "2025-10-02", 6500),
-            ("Player3", 30, 15, 5, 3200, "2025-10-03", 12000)
-        ]
+        # Ler dados do arquivo CSV
+        arquivo_dados_estatisticos = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'estatisticas.csv')
+        estatisticas_iniciais = []
+        
+        with open(arquivo_dados_estatisticos, 'r', encoding='utf-8') as arquivo_csv:
+            leitor = csv.DictReader(arquivo_csv)
+            for linha in leitor:
+                estatisticas_iniciais.append((
+                    linha['nome'],
+                    int(linha['abates']),
+                    int(linha['mortes']),
+                    int(linha['assistencias']),
+                    int(linha['dano']),
+                    linha['data'],
+                    int(linha['dinheiro'])
+                ))       
 
         db.executemany(
             "INSERT INTO estatisticas (nome, abates, mortes, assistencias, dano, data, dinheiro) VALUES (?, ?, ?, ?, ?, ?, ?)",
