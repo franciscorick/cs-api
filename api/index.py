@@ -2,8 +2,14 @@ from flask import Flask, jsonify
 import sqlite3
 import os
 import csv
+import time
 
 app = Flask(__name__)
+
+def log_event(evento, descricao):
+    log_caminho = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs', 'log.csv')
+    with open(log_caminho, 'a', encoding='utf-8') as log_file:
+        log_file.write(f"{evento},{descricao},{int(time.time())}\n")
 
 def get_db():
     """Conecta ao banco de dados SQLite."""
@@ -60,6 +66,8 @@ def init_db():
         db.commit()
     db.close()
 
+    log_event('inicializa_banco', 'banco foi inicializado')
+
 class Estatisticas:
     def __init__(self, nome, abates, mortes, assistencias, dano, data, dinheiro): #construtor
         self.nome = nome
@@ -103,6 +111,7 @@ def buscar_estatisticas():
                 "data": linha["data"],
                 "dinheiro": linha["dinheiro"],
             })
+        log_event('acessa_rota', 'rota estatistica foi acessada')
         return jsonify(estatisticas)
     finally:
         db.close()
@@ -120,3 +129,4 @@ init_db()
 if __name__ == '__main__':
 	# Executa a aplicação em modo debug
   app.run(host='0.0.0.0', port=5001, debug=True)
+
