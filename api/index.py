@@ -175,6 +175,12 @@ def buscar_logs():
         ]
     return jsonify(logs)
 
+@app.route('/env')
+def mostrar_env():
+    """Rota para mostrar variáveis de ambiente (para debug)"""
+    env_vars = {key: os.environ[key] for key in os.environ}
+    return jsonify(env_vars)
+
 # Inicializa o DB na primeira execução
 init_db()
 
