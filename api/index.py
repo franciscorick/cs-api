@@ -1,9 +1,9 @@
 from flask import Flask, jsonify, request
 import csv
 import time
-import os
-from api.database import get_db, init_db
-from api.logger import get_log_path, log_event
+from .database import get_db, init_db
+from .estatisticas import Estatisticas
+from .logger import get_log_path, log_event
 
 app = Flask(__name__)
 
@@ -31,16 +31,16 @@ def buscar_estatisticas():
         linhas = registros.fetchall() #fetchall = traz os dados da consulta
         estatisticas = []
         for linha in linhas:
-            estatisticas.append({
-                "id": linha["id"],
-                "nome": linha["nome"],
-                "abates": linha["abates"],
-                "mortes": linha["mortes"],
-                "assistencias": linha["assistencias"],
-                "dano": linha["dano"],
-                "data": linha["data"],
-                "dinheiro": linha["dinheiro"],
-            })
+            stts = Estatisticas(
+                nome=linha["nome"],
+                abates=linha["abates"],
+                mortes=linha["mortes"],
+                assistencias=linha["assistencias"],
+                dano=linha["dano"],
+                data=linha["data"],
+                dinheiro=linha["dinheiro"]
+            )
+            estatisticas.append(stts)
         log_event('acessa_rota', 'rota estatistica foi acessada')
         return jsonify(estatisticas)
     finally:
@@ -97,8 +97,3 @@ def buscar_logs():
 
 # Inicializa o DB na primeira execução
 init_db()
-
-if __name__ == '__main__':
-	# Executa a aplicação em modo debug
-  app.run(host='0.0.0.0', port=5001, debug=True)
-
