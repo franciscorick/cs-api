@@ -172,8 +172,7 @@ def buscar_logs():
 @app.route('/env')
 def mostrar_env():
     """Rota para mostrar variáveis de ambiente (para debug)"""
-    env_vars = {key: os.environ[key] for key in os.environ}
-    return jsonify(env_vars)
+    return jsonify(os.environ['VERCEL_ENV'])
 
 # Inicializa o DB na primeira execução
 init_db()
