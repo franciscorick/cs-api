@@ -2,8 +2,8 @@ from flask import Flask, jsonify, request
 import csv
 import time
 import os
-from database import get_db, init_db
-from logger import get_log_path, log_event
+from api.database import get_db, init_db
+from api.logger import get_log_path, log_event
 
 app = Flask(__name__)
 

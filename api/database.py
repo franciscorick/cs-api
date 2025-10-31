@@ -1,7 +1,7 @@
 import sqlite3
 import os
 import csv
-from logger import log_event
+from api.logger import log_event
 
 
 def get_db():
