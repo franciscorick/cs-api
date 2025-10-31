@@ -6,8 +6,24 @@ import time
 
 app = Flask(__name__)
 
+def get_log_path():
+    if os.environ.get('VERCEL_ENV'):
+        return os.path.join('/tmp', 'log.csv')
+    else:
+        return os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs', 'log.csv')
+
 def log_event(evento, descricao):
-    log_caminho = os.path.join('/tmp', 'log.csv')  # Mude o caminho para /tmp
+    log_caminho = get_log_path()
+    # Cria o diretório pai se não existir
+    os.makedirs(os.path.dirname(log_caminho), exist_ok=True)
+
+    # Verifica se o arquivo existe e se está vazio
+    if not os.path.exists(log_caminho) or os.path.getsize(log_caminho) == 0:
+        # Cria o arquivo e escreve o cabeçalho
+        with open(log_caminho, 'w', encoding='utf-8') as log_file:
+            log_file.write("evento,descricao,timestamp\n")
+
+    # Adiciona o evento ao log
     with open(log_caminho, 'a', encoding='utf-8') as log_file:
         log_file.write(f"{evento},{descricao},{int(time.time())}\n")
 
@@ -155,7 +171,7 @@ def posta_estatistica():
 
 @app.route('/logs')
 def buscar_logs():
-    log_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs', 'log.csv')
+    log_path = get_log_path()
     logs = []
     with open(log_path, 'r', encoding='utf-8') as log_file:
         leitor = csv.DictReader(log_file)
