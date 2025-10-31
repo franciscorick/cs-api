@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 import sqlite3
 import os
 import csv
@@ -6,8 +6,14 @@ import time
 
 app = Flask(__name__)
 
+def get_logs_path():
+    if os.environ.get('VERCEL'):
+        return os.path.join('/tmp', 'log.csv')
+    else:
+        return os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs', 'log.csv')
+
 def log_event(evento, descricao):
-    log_caminho = os.path.join('/tmp', 'log.csv')  # Mude o caminho para /tmp
+    log_caminho = get_logs_path()
     with open(log_caminho, 'a', encoding='utf-8') as log_file:
         log_file.write(f"{evento},{descricao},{int(time.time())}\n")
 
@@ -87,7 +93,11 @@ def index():
 	return jsonify({
 		"mensagem": "API Flask ativa na Vercel",
 		"status": "ok",
-		"endpoints": ["/", "/estatisticas"],
+		"endpoints": [
+            "/",
+            "/estatisticas",
+            "/logs"
+        ],
 		"versao": "1.0.0"
 	})
 
@@ -118,13 +128,40 @@ def buscar_estatisticas():
 
 @app.route('/estatisticas', methods=['POST'])
 def posta_estatistica():
-    return jsonify({
-        "mensagem": "post funcional"
-    })
+    db = get_db()
+    try:
+        dados = request.get_json()
+
+        # Validar campos obrigatórios
+        campos_obrigatorios = ['nome', 'abates', 'mortes', 'assistencias', 'dano', 'data', 'dinheiro']
+        for campo in campos_obrigatorios:
+            if campo not in dados:
+                return jsonify({"erro": f"Campo obrigatório ausente: {campo}"}), 400
+
+        # Inserir nova estatística
+        db.execute(
+            "INSERT INTO estatisticas (nome, abates, mortes, assistencias, dano, data, dinheiro) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (dados['nome'], dados['abates'], dados['mortes'], dados['assistencias'], dados['dano'], dados['data'], dados['dinheiro'])
+        )
+        db.commit()
+
+        # Recuperar o ID da estatística inserida
+        novo_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+
+        log_event('adiciona_estatistica', f'nova estatistica adicionada: {dados["nome"]}')
+
+        return jsonify({
+            "mensagem": "Estatística adicionada com sucesso",
+            "id": novo_id
+        }), 201
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
+    finally:
+        db.close()
 
 @app.route('/logs')
 def buscar_logs():
-    log_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs', 'log.csv')
+    log_path = get_logs_path()
     logs = []
     with open(log_path, 'r', encoding='utf-8') as log_file:
         leitor = csv.DictReader(log_file)
