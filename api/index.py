@@ -1,101 +1,11 @@
 from flask import Flask, jsonify, request
-import sqlite3
-import os
 import csv
 import time
+import os
+from database import get_db, init_db
+from logger import get_log_path, log_event
 
 app = Flask(__name__)
-
-def get_log_path():
-    if os.environ.get('VERCEL_ENV'):
-        return os.path.join('/tmp', 'log.csv')
-    else:
-        return os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs', 'log.csv')
-
-def log_event(evento, descricao):
-    log_caminho = get_log_path()
-    # Cria o diretório pai se não existir
-    os.makedirs(os.path.dirname(log_caminho), exist_ok=True)
-
-    # Verifica se o arquivo existe e se está vazio
-    if not os.path.exists(log_caminho) or os.path.getsize(log_caminho) == 0:
-        # Cria o arquivo e escreve o cabeçalho
-        with open(log_caminho, 'w', encoding='utf-8') as log_file:
-            log_file.write("evento,descricao,timestamp\n")
-
-    # Adiciona o evento ao log
-    with open(log_caminho, 'a', encoding='utf-8') as log_file:
-        log_file.write(f"{evento},{descricao},{int(time.time())}\n")
-
-def get_db():
-    """Conecta ao banco de dados SQLite."""
-    # Na Vercel, use /tmp para arquivos temporários
-    db_path = '/tmp/estatisticas.db' if os.environ.get('VERCEL') else 'estatisticas.db'
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-def init_db():
-    """Cria tabelas e popula dados iniciais se necessário."""
-    db = get_db()
-    db.execute(
-        """
-        CREATE TABLE IF NOT EXISTS estatisticas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nome TEXT NOT NULL,
-            abates INTEGER NOT NULL,
-            mortes INTEGER NOT NULL,
-            assistencias INTEGER NOT NULL,
-            dano INTEGER NOT NULL,
-            data TEXT NOT NULL,
-            dinheiro INTEGER NOT NULL
-        )
-        """
-    )
-    db.commit()
-
-    # Popular dados iniciais apenas se vazio
-    cur = db.execute("SELECT COUNT(*) AS total FROM estatisticas")
-    total = cur.fetchone()[0]
-    if total == 0:
-        # Ler dados do arquivo CSV
-        arquivo_dados_estatisticos = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'estatisticas.csv')
-        estatisticas_iniciais = []
-
-        with open(arquivo_dados_estatisticos, 'r', encoding='utf-8') as arquivo_csv:
-            leitor = csv.DictReader(arquivo_csv)
-            for linha in leitor:
-                estatisticas_iniciais.append((
-                    linha['nome'],
-                    int(linha['abates']),
-                    int(linha['mortes']),
-                    int(linha['assistencias']),
-                    int(linha['dano']),
-                    linha['data'],
-                    int(linha['dinheiro'])
-                ))
-
-        db.executemany(
-            "INSERT INTO estatisticas (nome, abates, mortes, assistencias, dano, data, dinheiro) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            estatisticas_iniciais
-        )
-        db.commit()
-    db.close()
-
-    log_event('inicializa_banco', 'banco foi inicializado')
-
-class Estatisticas:
-    def __init__(self, nome, abates, mortes, assistencias, dano, data, dinheiro): #construtor
-        self.nome = nome
-        self.abates = abates
-        self.mortes = mortes
-        self.assistencias = assistencias
-        self.dano = dano
-        self.data = data
-        self.dinheiro = dinheiro
-
-    def calcular_kd(self): #definição de função
-        return self.abates/self.mortes
 
 @app.route('/')
 def index():
@@ -184,11 +94,6 @@ def buscar_logs():
             for linha in leitor  # ← Funcional (declarativo)
         ]
     return jsonify(logs)
-
-@app.route('/env')
-def mostrar_env():
-    """Rota para mostrar variáveis de ambiente (para debug)"""
-    return jsonify(os.environ['VERCEL_ENV'])
 
 # Inicializa o DB na primeira execução
 init_db()

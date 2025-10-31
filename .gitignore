@@ -9,3 +9,5 @@ venv.bak/
 *.db
 logs/
 *.log
+__pycache__/
+*.pyc
