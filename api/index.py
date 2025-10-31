@@ -32,6 +32,7 @@ def buscar_estatisticas():
         estatisticas = []
         for linha in linhas:
             stts = Estatisticas(
+                id=linha["id"],
                 nome=linha["nome"],
                 abates=linha["abates"],
                 mortes=linha["mortes"],
@@ -40,7 +41,7 @@ def buscar_estatisticas():
                 data=linha["data"],
                 dinheiro=linha["dinheiro"]
             )
-            estatisticas.append(stts)
+            estatisticas.append(stts.to_dict())
         log_event('acessa_rota', 'rota estatistica foi acessada')
         return jsonify(estatisticas)
     finally:
