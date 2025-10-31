@@ -1,9 +1,9 @@
 from flask import Flask, jsonify, request
 import csv
 import time
-from .database import get_db, init_db
-from .estatisticas import Estatisticas
-from .logger import get_log_path, log_event
+from utils.database import get_db, init_db
+from utils.estatisticas import Estatisticas
+from utils.logger import get_log_path, log_event
 
 app = Flask(__name__)
 

@@ -36,7 +36,7 @@ def init_db():
     cur = db.execute("SELECT COUNT(*) AS total FROM estatisticas")
     total = cur.fetchone()[0]
     if total == 0:
-        # Ler dados do arquivo CSV
+        # Ler dados do arquivo CSV - ajusta o caminho considerando que agora estamos em utils/
         arquivo_dados_estatisticos = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'estatisticas.csv')
         estatisticas_iniciais = []
 

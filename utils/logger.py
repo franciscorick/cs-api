@@ -7,6 +7,7 @@ def get_log_path():
     if os.environ.get('VERCEL_ENV'):
         return os.path.join('/tmp', 'log.csv')
     else:
+        # Ajusta o caminho considerando que agora estamos em utils/
         return os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs', 'log.csv')
 
 
