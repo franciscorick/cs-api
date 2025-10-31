@@ -7,10 +7,7 @@ import time
 app = Flask(__name__)
 
 def get_logs_path():
-    if os.environ.get('VERCEL_ENV'):
-        return os.path.join('/tmp', 'log.csv')
-    else:
-        return os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs', 'log.csv')
+    return os.path.join('/tmp', 'log.csv')  # Mude o caminho para /tmp
 
 def log_event(evento, descricao):
     log_caminho = get_logs_path()
