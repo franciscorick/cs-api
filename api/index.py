@@ -6,11 +6,8 @@ import time
 
 app = Flask(__name__)
 
-def get_logs_path():
-    return os.path.join('/tmp', 'log.csv')  # Mude o caminho para /tmp
-
 def log_event(evento, descricao):
-    log_caminho = get_logs_path()
+    log_caminho = os.path.join('/tmp', 'log.csv')  # Mude o caminho para /tmp
     with open(log_caminho, 'a', encoding='utf-8') as log_file:
         log_file.write(f"{evento},{descricao},{int(time.time())}\n")
 
@@ -158,7 +155,7 @@ def posta_estatistica():
 
 @app.route('/logs')
 def buscar_logs():
-    log_path = get_logs_path()
+    log_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs', 'log.csv')
     logs = []
     with open(log_path, 'r', encoding='utf-8') as log_file:
         leitor = csv.DictReader(log_file)
