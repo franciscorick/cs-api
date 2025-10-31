@@ -32,7 +32,8 @@ vercel
 
 - `GET /` - Status da API
 - `GET /estatisticas` - Lista todas as estatísticas
-- `POST /estatisticas` - Adiciona nova estatística (em desenvolvimento)
+- `POST /estatisticas` - Adiciona nova estatística
+- `GET /logs` - Lista logs de eventos
 
 ## ⚠️ Importante - Banco de Dados
 
@@ -46,25 +47,82 @@ Na Vercel, o SQLite funciona em `/tmp` e **é temporário**. Os dados são perdi
 
 ## 🛠️ Desenvolvimento Local
 
+### Instalação
+
 ```bash
+# Clone o repositório
+git clone <repository-url>
+cd cs-api
+
 # Instalar dependências
 pip install -r requirements.txt
-
-# Rodar localmente
-python api/index.py
 ```
 
-Acesse: http://localhost:5001
+### Executar a API
+
+```bash
+# Rodar localmente
+python run.py
+```
+
+A API estará disponível em: http://localhost:5001
+
+### Testando os endpoints
+
+```bash
+# GET - Listar estatísticas
+curl http://localhost:5001/estatisticas
+
+# POST - Adicionar nova estatística
+curl -X POST http://localhost:5001/estatisticas \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nome": "jogador1",
+    "abates": 15,
+    "mortes": 10,
+    "assistencias": 5,
+    "dano": 2500,
+    "data": "2025-10-31",
+    "dinheiro": 3000
+  }'
+
+# GET - Ver logs
+curl http://localhost:5001/logs
+```
 
 ## 📦 Estrutura do Projeto
 
 ```
 cs-api/
 ├── api/
-│   └── index.py      # Entry point para Vercel e execução local
-├── requirements.txt  # Dependências Python
-├── vercel.json       # Configuração Vercel
-└── .vercelignore     # Arquivos ignorados no deploy
+│   ├── __init__.py      # Pacote API
+│   └── index.py         # Rotas da API (controllers)
+├── utils/
+│   ├── __init__.py      # Pacote Utils
+│   ├── database.py      # Funções de banco de dados
+│   ├── logger.py        # Sistema de logging
+│   └── estatisticas.py  # Modelo de dados Estatisticas
+├── data/
+│   └── estatisticas.csv # Dados iniciais
+├── logs/
+│   └── log.csv          # Arquivo de logs (gerado automaticamente)
+├── run.py               # Script para executar localmente
+├── requirements.txt     # Dependências Python
+├── vercel.json          # Configuração Vercel
+└── .vercelignore        # Arquivos ignorados no deploy
 ```
 
-Nota: o arquivo `vercel.json` está configurado para compilar funções Python em `api/**/*.py` e rotear `/(.*)` para `/api/index.py`.
+### Arquitetura
+
+O projeto segue uma arquitetura em camadas com separação de responsabilidades:
+
+- **`api/`**: Camada de apresentação (rotas/endpoints)
+- **`utils/`**: Camada de lógica de negócio e utilitários
+  - `database.py`: Gerenciamento do banco SQLite
+  - `logger.py`: Sistema de logging de eventos
+  - `estatisticas.py`: Modelo de dados com métodos de negócio
+
+### Banco de Dados
+
+- **Local**: SQLite (`estatisticas.db` na raiz do projeto)
+- **Vercel**: SQLite em `/tmp` (temporário, dados perdidos entre deploys)
