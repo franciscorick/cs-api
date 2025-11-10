@@ -70,7 +70,7 @@ def init_db():
                     int(linha['dano']),
                     linha['data'],
                     int(linha['dinheiro'])
-                ))       
+                ))
 
          # Insere todos os registros no banco
         db.executemany(
