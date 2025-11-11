@@ -134,13 +134,20 @@ class Estatisticas:
 
 @app.route('/')
 def index():
-	"""Rota principal que retorna um JSON simples"""
-	return jsonify({
-		"mensagem": "API Flask ativa na Vercel",
-		"status": "ok",
-		"endpoints": ["/", "/estatisticas"],
-		"versao": "1.0.0"
-	})
+    """Rota principal que retorna um JSON simples"""
+    return jsonify({
+        "mensagem": "API Flask ativa na Vercel",
+        "status": "ok",
+        "endpoints": [
+            "/",
+            "GET /estatisticas",
+            "POST /estatisticas",
+            "PUT /estatistica/<int:estatistica_id>",
+            "DELETE /estatistica/<int:estatistica_id>",
+            "GET /logs"
+        ],
+        "versao": "1.0.0"
+    })
 
  # Rota "/estatisticas" (GET) → retorna os dados do banco
 
