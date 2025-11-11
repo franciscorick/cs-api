@@ -8,14 +8,39 @@ import time     # Usado para gerar timestamps (tempo atual em segundos).
 # Inicializa o app Flask
 app = Flask(__name__)
 
+# --------------------------- UTILIDADE DE LOG PATH ---------------------------
+def get_log_path():
+    """Retorna o caminho do arquivo de log.
+    Em ambiente Vercel, usa /tmp (único local com escrita permitida).
+    """
+    if os.environ.get('VERCEL'):
+        return '/tmp/log.csv'
+    return os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs', 'log.csv')
+
+def ensure_log_file():
+    """Garante que o arquivo de log exista e tenha cabeçalho."""
+    caminho = get_log_path()
+    pasta = os.path.dirname(caminho)
+    try:
+        os.makedirs(pasta, exist_ok=True)
+        if not os.path.exists(caminho):
+            with open(caminho, 'w', encoding='utf-8') as f:
+                f.write('evento,descricao,timestamp\n')
+    except Exception:
+        # Não falha a função caso logging não esteja disponível
+        pass
+
 # --------------------------- FUNÇÃO DE LOG ---------------------------
 def log_event(evento, descricao):
-     # Monta o caminho até o arquivo de log (na pasta logs/log.csv).
-    log_caminho = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs', 'log.csv')
-     # Abre o arquivo no modo 'append' (acrescentar novas linhas).
-    with open(log_caminho, 'a', encoding='utf-8') as log_file:
-         # Escreve uma linha com o evento, descrição e timestamp.
-        log_file.write(f"{evento},{descricao},{int(time.time())}\n")
+    """Registra um evento no arquivo de log de forma resiliente."""
+    try:
+        ensure_log_file()
+        log_caminho = get_log_path()
+        with open(log_caminho, 'a', encoding='utf-8') as log_file:
+            log_file.write(f"{evento},{descricao},{int(time.time())}\n")
+    except Exception:
+        # Em ambientes sem permissão de escrita, apenas ignora o log
+        pass
 
 # --------------------------- CONEXÃO COM O BANCO ---------------------------
 def get_db():
@@ -309,23 +334,26 @@ def atualizar_estatistica(estatistica_id):
  # Rota "/logs" → lê e retorna o conteúdo do arquivo de logs
 @app.route('/logs')
 def buscar_logs():
-     # Caminho até o log.csv
-    log_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs', 'log.csv')
-    logs = []
-     # Abre o log e lê cada linha como dicionário
-    with open(log_path, 'r', encoding='utf-8') as log_file:
-        leitor = csv.DictReader(log_file)
-        logs = [
-            {
-                "evento": linha["evento"],
-                "descricao": linha["descricao"],
-                 # Converte o timestamp (número) em data legível
-                "timestamp": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(int(linha["timestamp"])))
-            }
-            for linha in leitor  # list comprehension: cria uma lista a partir do arquivo
-        ]
-     # Retorna os logs em formato JSON
-    return jsonify(logs)
+    """Lê e retorna o conteúdo do arquivo de logs em JSON."""
+    try:
+        ensure_log_file()
+        log_path = get_log_path()
+        logs = []
+        with open(log_path, 'r', encoding='utf-8') as log_file:
+            leitor = csv.DictReader(log_file)
+            for linha in leitor:
+                try:
+                    logs.append({
+                        "evento": linha.get("evento", ""),
+                        "descricao": linha.get("descricao", ""),
+                        "timestamp": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(int(linha.get("timestamp", "0") or 0)))
+                    })
+                except Exception:
+                    # Ignora linhas malformadas
+                    continue
+        return jsonify(logs)
+    except FileNotFoundError:
+        return jsonify([])
 
 # --------------------------- EXECUÇÃO PRINCIPAL ---------------------------
 # Inicializa o banco na primeira execução do script
