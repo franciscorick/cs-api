@@ -1,5 +1,6 @@
 # Importa as bibliotecas necessárias
 from flask import Flask, jsonify, request    # Flask = framework para criar APIs web / jsonify = retorna dados em formato JSON.
+from flask_cors import CORS  # Habilita CORS para permitir requisições de outros domínios
 import sqlite3      # Banco de dados leve (SQLite).
 import os       # Manipulação de diretórios e caminhos de arquivo.
 import csv      # Leitura e escrita de arquivos CSV.
@@ -7,6 +8,10 @@ import time     # Usado para gerar timestamps (tempo atual em segundos).
 
 # Inicializa o app Flask
 app = Flask(__name__)
+
+# Configura CORS para permitir requisições de qualquer origem
+# Em produção, considere restringir para domínios específicos
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 # --------------------------- UTILIDADE DE LOG PATH ---------------------------
 def get_log_path():
