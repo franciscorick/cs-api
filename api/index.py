@@ -1,5 +1,5 @@
 # Importa as bibliotecas necessárias
-from flask import Flask, jsonify    # Flask = framework para criar APIs web / jsonify = retorna dados em formato JSON.
+from flask import Flask, jsonify, request    # Flask = framework para criar APIs web / jsonify = retorna dados em formato JSON.
 import sqlite3      # Banco de dados leve (SQLite).
 import os       # Manipulação de diretórios e caminhos de arquivo.
 import csv      # Leitura e escrita de arquivos CSV.
@@ -13,7 +13,7 @@ def log_event(evento, descricao):
      # Monta o caminho até o arquivo de log (na pasta logs/log.csv).
     log_caminho = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs', 'log.csv')
      # Abre o arquivo no modo 'append' (acrescentar novas linhas).
-    with open(log_caminho, 'a', encoding='utf-8') as log_file: 
+    with open(log_caminho, 'a', encoding='utf-8') as log_file:
          # Escreve uma linha com o evento, descrição e timestamp.
         log_file.write(f"{evento},{descricao},{int(time.time())}\n")
 
@@ -56,7 +56,7 @@ def init_db():
         # Se estiver vazia, lê o arquivo CSV inicial e popula a tabela.
         arquivo_dados_estatisticos = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'estatisticas.csv')
         estatisticas_iniciais = []
-        
+
          # Abre o CSV com os dados de exemplo
         with open(arquivo_dados_estatisticos, 'r', encoding='utf-8') as arquivo_csv:
             leitor = csv.DictReader(arquivo_csv)
@@ -78,7 +78,7 @@ def init_db():
             estatisticas_iniciais
         )
         db.commit()     # Salva as inserções
-    db.close()  # Fecha a conexão com o banco   
+    db.close()  # Fecha a conexão com o banco
 
      # Registra o evento no log
     log_event('inicializa_banco', 'banco foi inicializado')
@@ -101,6 +101,7 @@ class Estatisticas:
 
  # --------------------------- ROTAS FLASK ---------------------------
  # Rota principal ("/")
+
 @app.route('/')
 def index():
 	"""Rota principal que retorna um JSON simples"""
@@ -112,6 +113,7 @@ def index():
 	})
 
  # Rota "/estatisticas" (GET) → retorna os dados do banco
+
 @app.route('/estatisticas')
 def buscar_estatisticas():
     db = get_db()
@@ -145,11 +147,164 @@ def buscar_estatisticas():
         db.close()
 
  # Rota "/estatisticas" (POST) → usada para adicionar dados (ainda não implementada)
+
 @app.route('/estatisticas', methods=['POST'])
 def posta_estatistica():
-    return jsonify({
-        "mensagem": "post funcional" # apenas teste
-    })
+    # Tenta obter o corpo como JSON; se vier como form-data, faz fallback
+    payload = request.get_json(silent=True) or request.form
+
+    if not payload:
+        return jsonify({
+            "erro": "Corpo da requisição ausente ou inválido. Envie JSON com os campos obrigatórios."
+        }), 400
+
+    # Campos esperados
+    campos_obrigatorios = [
+        "nome", "abates", "mortes", "assistencias", "dano", "data", "dinheiro"
+    ]
+
+    faltando = [c for c in campos_obrigatorios if c not in payload]
+    if faltando:
+        return jsonify({
+            "erro": "Campos obrigatórios ausentes",
+            "faltando": faltando
+        }), 400
+
+    # Validação e conversões de tipo
+    try:
+        nome = str(payload["nome"]).strip()
+        abates = int(payload["abates"])  # ints
+        mortes = int(payload["mortes"])  # ints
+        assistencias = int(payload["assistencias"])  # ints
+        dano = int(payload["dano"])  # ints
+        data_val = str(payload["data"]).strip()  # manter como string (YYYY-MM-DD, por ex.)
+        dinheiro = int(payload["dinheiro"])  # ints
+    except (ValueError, TypeError):
+        return jsonify({
+            "erro": "Tipos inválidos. Certifique-se de enviar inteiros para abates, mortes, assistencias, dano e dinheiro."
+        }), 400
+
+    if not nome:
+        return jsonify({"erro": "'nome' não pode ser vazio."}), 400
+
+    db = get_db()
+    try:
+        cur = db.execute(
+            """
+            INSERT INTO estatisticas (nome, abates, mortes, assistencias, dano, data, dinheiro)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (nome, abates, mortes, assistencias, dano, data_val, dinheiro)
+        )
+        db.commit()
+        novo_id = cur.lastrowid
+
+        # Log do evento de criação
+        log_event('cria_estatistica', f'estatistica criada id={novo_id}')
+
+        return jsonify({
+            "id": novo_id,
+            "nome": nome,
+            "abates": abates,
+            "mortes": mortes,
+            "assistencias": assistencias,
+            "dano": dano,
+            "data": data_val,
+            "dinheiro": dinheiro
+        }), 201
+    except Exception as e:
+        # Em produção, evitar expor detalhes do erro
+        return jsonify({"erro": "Falha ao inserir no banco de dados."}), 500
+    finally:
+        db.close()
+
+@app.route('/estatistica/<int:estatistica_id>', methods=['DELETE'])
+def deletar_estatistica(estatistica_id):
+    db = get_db()
+    try:
+        cur = db.execute(
+            "DELETE FROM estatisticas WHERE id = ?",
+            (estatistica_id,)
+        )
+        db.commit()
+
+        if cur.rowcount == 0:
+            return jsonify({"erro": "Estatística não encontrada."}), 404
+
+        # Log do evento de exclusão
+        log_event('deleta_estatistica', f'estatistica deletada id={estatistica_id}')
+
+        return jsonify({"mensagem": "Estatística deletada com sucesso."}), 200
+    except Exception as e:
+        return jsonify({"erro": "Falha ao deletar do banco de dados."}), 500
+    finally:
+        db.close()
+
+@app.route('/estatistica/<int:estatistica_id>', methods=['PUT'])
+def atualizar_estatistica(estatistica_id):
+    payload = request.get_json(silent=True) or request.form
+
+    if not payload:
+        return jsonify({
+            "erro": "Corpo da requisição ausente ou inválido. Envie JSON com os campos obrigatórios."
+        }), 400
+
+    campos_obrigatorios = [
+        "nome", "abates", "mortes", "assistencias", "dano", "data", "dinheiro"
+    ]
+
+    faltando = [c for c in campos_obrigatorios if c not in payload]
+    if faltando:
+        return jsonify({
+            "erro": "Campos obrigatórios ausentes",
+            "faltando": faltando
+        }), 400
+
+    try:
+        nome = str(payload["nome"]).strip()
+        abates = int(payload["abates"])
+        mortes = int(payload["mortes"])
+        assistencias = int(payload["assistencias"])
+        dano = int(payload["dano"])
+        data_val = str(payload["data"]).strip()
+        dinheiro = int(payload["dinheiro"])
+    except (ValueError, TypeError):
+        return jsonify({
+            "erro": "Tipos inválidos. Certifique-se de enviar inteiros para abates, mortes, assistencias, dano e dinheiro."
+        }), 400
+
+    if not nome:
+        return jsonify({"erro": "'nome' não pode ser vazio."}), 400
+
+    db = get_db()
+    try:
+        cur = db.execute(
+            """
+            UPDATE estatisticas
+            SET nome = ?, abates = ?, mortes = ?, assistencias = ?, dano = ?, data = ?, dinheiro = ?
+            WHERE id = ?
+            """,
+            (nome, abates, mortes, assistencias, dano, data_val, dinheiro, estatistica_id)
+        )
+        db.commit()
+
+        if cur.rowcount == 0:
+            return jsonify({"erro": "Estatística não encontrada."}), 404
+
+        log_event('atualiza_estatistica', f'estatistica atualizada id={estatistica_id}')
+
+        return jsonify({
+            "id": estatistica_id,
+            "nome": nome,
+            "abates": abates,
+            "mortes": mortes,
+            "assistencias": assistencias,
+            "dano": dano,
+            "data": data_val,
+            "dinheiro": dinheiro
+        }), 200
+    except Exception as e:
+        return jsonify({"erro": "Falha ao atualizar estatística."}), 500
 
  # Rota "/logs" → lê e retorna o conteúdo do arquivo de logs
 @app.route('/logs')
@@ -175,7 +330,7 @@ def buscar_logs():
 # --------------------------- EXECUÇÃO PRINCIPAL ---------------------------
 # Inicializa o banco na primeira execução do script
 init_db()
- 
+
  # Só executa o servidor se o arquivo for executado diretamente (não importado)
 if __name__ == '__main__':
 	# Roda o servidor Flask em modo debug, acessível em todas as interfaces (0.0.0.0)
