@@ -249,7 +249,7 @@ def posta_estatistica():
             "data": data_val,
             "dinheiro": dinheiro
         }), 201
-    except Exception as e:
+    except Exception:
         # Em produção, evitar expor detalhes do erro
         return jsonify({"erro": "Falha ao inserir no banco de dados."}), 500
     finally:
@@ -272,7 +272,7 @@ def deletar_estatistica(estatistica_id):
         log_event('deleta_estatistica', f'estatistica deletada id={estatistica_id}')
 
         return jsonify({"mensagem": "Estatística deletada com sucesso."}), 200
-    except Exception as e:
+    except Exception:
         return jsonify({"erro": "Falha ao deletar do banco de dados."}), 500
     finally:
         db.close()
@@ -342,6 +342,8 @@ def atualizar_estatistica(estatistica_id):
         }), 200
     except Exception as e:
         return jsonify({"erro": "Falha ao atualizar estatística."}), 500
+    finally:
+        db.close()
 
  # Rota "/logs" → lê e retorna o conteúdo do arquivo de logs
 @app.route('/logs')
