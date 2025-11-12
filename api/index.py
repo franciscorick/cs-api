@@ -360,7 +360,7 @@ def buscar_logs():
                     logs.append({
                         "evento": linha.get("evento", ""),
                         "descricao": linha.get("descricao", ""),
-                        "timestamp": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(int(linha.get("timestamp", "0") or 0)))
+                        "timestamp": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(int(linha.get("timestamp") or 0)))
                     })
                 except Exception:
                     # Ignora linhas malformadas
