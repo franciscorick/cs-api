@@ -1,5 +1,6 @@
 # Importa as bibliotecas necessárias
 from flask import Flask, jsonify, request    # Flask = framework para criar APIs web / jsonify = retorna dados em formato JSON.
+from flask_cors import CORS  # Habilita CORS para permitir requisições de outros domínios
 import sqlite3      # Banco de dados leve (SQLite).
 import os       # Manipulação de diretórios e caminhos de arquivo.
 import csv      # Leitura e escrita de arquivos CSV.
@@ -7,6 +8,10 @@ import time     # Usado para gerar timestamps (tempo atual em segundos).
 
 # Inicializa o app Flask
 app = Flask(__name__)
+
+# Configura CORS para permitir requisições de qualquer origem
+# Em produção, considere restringir para domínios específicos
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 # --------------------------- UTILIDADE DE LOG PATH ---------------------------
 def get_log_path():
@@ -129,13 +134,20 @@ class Estatisticas:
 
 @app.route('/')
 def index():
-	"""Rota principal que retorna um JSON simples"""
-	return jsonify({
-		"mensagem": "API Flask ativa na Vercel",
-		"status": "ok",
-		"endpoints": ["/", "/estatisticas"],
-		"versao": "1.0.0"
-	})
+    """Rota principal que retorna um JSON simples"""
+    return jsonify({
+        "mensagem": "API Flask ativa na Vercel",
+        "status": "ok",
+        "endpoints": [
+            "/",
+            "GET /estatisticas",
+            "POST /estatisticas",
+            "PUT /estatistica/<int:estatistica_id>",
+            "DELETE /estatistica/<int:estatistica_id>",
+            "GET /logs"
+        ],
+        "versao": "1.0.0"
+    })
 
  # Rota "/estatisticas" (GET) → retorna os dados do banco
 
@@ -237,7 +249,7 @@ def posta_estatistica():
             "data": data_val,
             "dinheiro": dinheiro
         }), 201
-    except Exception as e:
+    except Exception:
         # Em produção, evitar expor detalhes do erro
         return jsonify({"erro": "Falha ao inserir no banco de dados."}), 500
     finally:
@@ -260,7 +272,7 @@ def deletar_estatistica(estatistica_id):
         log_event('deleta_estatistica', f'estatistica deletada id={estatistica_id}')
 
         return jsonify({"mensagem": "Estatística deletada com sucesso."}), 200
-    except Exception as e:
+    except Exception:
         return jsonify({"erro": "Falha ao deletar do banco de dados."}), 500
     finally:
         db.close()
@@ -330,6 +342,8 @@ def atualizar_estatistica(estatistica_id):
         }), 200
     except Exception as e:
         return jsonify({"erro": "Falha ao atualizar estatística."}), 500
+    finally:
+        db.close()
 
  # Rota "/logs" → lê e retorna o conteúdo do arquivo de logs
 @app.route('/logs')
@@ -346,7 +360,7 @@ def buscar_logs():
                     logs.append({
                         "evento": linha.get("evento", ""),
                         "descricao": linha.get("descricao", ""),
-                        "timestamp": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(int(linha.get("timestamp", "0") or 0)))
+                        "timestamp": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(int(linha.get("timestamp") or 0)))
                     })
                 except Exception:
                     # Ignora linhas malformadas
