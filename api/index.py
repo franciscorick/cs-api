@@ -171,23 +171,25 @@ def buscar_estatisticas():
          # Fecha a conexão com o banco, independente de sucesso/erro
         db.close()
 
- # Rota "/estatisticas" (POST) → usada para adicionar dados (ainda não implementada)
+ # Rota "/estatisticas" (POST) → usada para adicionar dados 
 
 @app.route('/estatisticas', methods=['POST'])
 def posta_estatistica():
     # Tenta obter o corpo como JSON; se vier como form-data, faz fallback
     payload = request.get_json(silent=True) or request.form
 
+    # Se corpo for vazio ou inválido → erro
     if not payload:
         return jsonify({
             "erro": "Corpo da requisição ausente ou inválido. Envie JSON com os campos obrigatórios."
         }), 400
 
-    # Campos esperados
+    # Campos esperados no corpo da requisição
     campos_obrigatorios = [
         "nome", "abates", "mortes", "assistencias", "dano", "data", "dinheiro"
     ]
 
+    # Verifica quais campos faltam no JSON
     faltando = [c for c in campos_obrigatorios if c not in payload]
     if faltando:
         return jsonify({
@@ -195,16 +197,17 @@ def posta_estatistica():
             "faltando": faltando
         }), 400
 
-    # Validação e conversões de tipo
+    # Validação e conversões de tipo (garante que números são números)
     try:
         nome = str(payload["nome"]).strip()
-        abates = int(payload["abates"])  # ints
-        mortes = int(payload["mortes"])  # ints
-        assistencias = int(payload["assistencias"])  # ints
-        dano = int(payload["dano"])  # ints
+        abates = int(payload["abates"])  
+        mortes = int(payload["mortes"])  
+        assistencias = int(payload["assistencias"])  
+        dano = int(payload["dano"])  
         data_val = str(payload["data"]).strip()  # manter como string (YYYY-MM-DD, por ex.)
-        dinheiro = int(payload["dinheiro"])  # ints
+        dinheiro = int(payload["dinheiro"])  
     except (ValueError, TypeError):
+        # Se algo não puder ser convertido para int
         return jsonify({
             "erro": "Tipos inválidos. Certifique-se de enviar inteiros para abates, mortes, assistencias, dano e dinheiro."
         }), 400
@@ -214,6 +217,7 @@ def posta_estatistica():
 
     db = get_db()
     try:
+        # Insere os dados no banco
         cur = db.execute(
             """
             INSERT INTO estatisticas (nome, abates, mortes, assistencias, dano, data, dinheiro)
@@ -222,6 +226,7 @@ def posta_estatistica():
             (nome, abates, mortes, assistencias, dano, data_val, dinheiro)
         )
         db.commit()
+        # ID gerado automaticamente pelo banco
         novo_id = cur.lastrowid
 
         # Log do evento de criação
@@ -243,20 +248,23 @@ def posta_estatistica():
     finally:
         db.close()
 
+# Rota "/estatistica/<id>" (DELETE) → deleta uma estatística pelo ID
 @app.route('/estatistica/<int:estatistica_id>', methods=['DELETE'])
 def deletar_estatistica(estatistica_id):
     db = get_db()
     try:
+        # Executa o DELETE
         cur = db.execute(
             "DELETE FROM estatisticas WHERE id = ?",
             (estatistica_id,)
         )
         db.commit()
 
+        # Se nenhuma linha foi afetada → ID não existe
         if cur.rowcount == 0:
             return jsonify({"erro": "Estatística não encontrada."}), 404
 
-        # Log do evento de exclusão
+        # Log da exclusão
         log_event('deleta_estatistica', f'estatistica deletada id={estatistica_id}')
 
         return jsonify({"mensagem": "Estatística deletada com sucesso."}), 200
@@ -265,8 +273,10 @@ def deletar_estatistica(estatistica_id):
     finally:
         db.close()
 
+# Rota "/estatistica/<id>" (PUT) → atualiza uma estatística existente
 @app.route('/estatistica/<int:estatistica_id>', methods=['PUT'])
 def atualizar_estatistica(estatistica_id):
+    # Lê o corpo da requisição
     payload = request.get_json(silent=True) or request.form
 
     if not payload:
@@ -278,13 +288,15 @@ def atualizar_estatistica(estatistica_id):
         "nome", "abates", "mortes", "assistencias", "dano", "data", "dinheiro"
     ]
 
+    # Verifica campos faltando
     faltando = [c for c in campos_obrigatorios if c not in payload]
     if faltando:
         return jsonify({
             "erro": "Campos obrigatórios ausentes",
             "faltando": faltando
         }), 400
-
+        
+    # Converte tipos para garantir integridade
     try:
         nome = str(payload["nome"]).strip()
         abates = int(payload["abates"])
@@ -303,6 +315,7 @@ def atualizar_estatistica(estatistica_id):
 
     db = get_db()
     try:
+        # Atualiza os dados no banco
         cur = db.execute(
             """
             UPDATE estatisticas
@@ -313,6 +326,7 @@ def atualizar_estatistica(estatistica_id):
         )
         db.commit()
 
+        # rowcount == 0 significa que o id não existe
         if cur.rowcount == 0:
             return jsonify({"erro": "Estatística não encontrada."}), 404
 
@@ -336,11 +350,13 @@ def atualizar_estatistica(estatistica_id):
 def buscar_logs():
     """Lê e retorna o conteúdo do arquivo de logs em JSON."""
     try:
-        ensure_log_file()
-        log_path = get_log_path()
+        ensure_log_file()   # Garante que o arquivo existe
+        log_path = get_log_path()   # Pega o caminho do arquivo
         logs = []
+        # Abre e lê o arquivo CSV de logs
         with open(log_path, 'r', encoding='utf-8') as log_file:
             leitor = csv.DictReader(log_file)
+            # Cada linha vira um dicionário
             for linha in leitor:
                 try:
                     logs.append({
@@ -349,10 +365,11 @@ def buscar_logs():
                         "timestamp": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(int(linha.get("timestamp", "0") or 0)))
                     })
                 except Exception:
-                    # Ignora linhas malformadas
+                    # Ignora linhas malformadas para evitar quebra do sistema
                     continue
         return jsonify(logs)
     except FileNotFoundError:
+        # Se não existir, retorna lista vazia
         return jsonify([])
 
 # --------------------------- EXECUÇÃO PRINCIPAL ---------------------------
